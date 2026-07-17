@@ -38,48 +38,57 @@ Summarize my June 2026 credit consumption.
 How many Heavy tasks did I run last month?
 ```
 
-## Tracker Sheet Sample
+## Workbook Screenshots
 
 All examples below are fictional.
 
+### Usage Tab
+
 ![Excel tracker sample with color-coded Light, Medium, and Heavy tasks](assets/usage-tracker-sheet.png)
 
-*Excel-rendered view of the core usage columns. Light is green, Medium is amber,
-and Heavy is red.*
+*Fictional Excel-rendered Usage tab. The colored header includes filters; Light is
+green, Medium is amber, and Heavy is red.*
+
+### July Credits Tab
+
+![Fictional July credit summary with weekly totals and task-size breakdown](assets/july-credits-sheet.png)
+
+*Fictional Excel-rendered July Credits tab showing weekly consumption, the monthly
+total, and credits and prompt counts by task size.*
 
 ### Accessible Data Sample
 
 | Date | Time | Task Name | Task Type | Task Size | Credits Used | Running Total | User Prompt | Notes | Model |
 |---|---|---|---|---|---:|---:|---|---|---|
-| 2026-06-01 | 09:15 | Summarize project notes | one-off | Light | 180 | 180 | Summarize these project notes. | Completed | Example Model A |
-| 2026-06-02 | 14:30 | Draft launch plan | one-off | Medium | 460 | 640 | Draft a launch plan for a fictional product. | Completed | Example Model A |
-| 2026-06-04 | 11:05 | Build research report | one-off | Heavy | 920 | 1560 | Create a research report using the supplied sample data. | Completed | Example Model B |
-| 2026-06-05 | 16:20 | Weekly status digest | recurring |  |  | 1560 | Prepare my weekly status digest. | pending - awaiting credit figure | Example Model A |
+| 2026-07-02 | 09:10 | Summarize workshop notes | one-off | Light | 180 | 180 | Summarize these fictional workshop notes. | Completed | Example Model A |
+| 2026-07-03 | 14:25 | Draft product launch plan | one-off | Medium | 460 | 640 | Draft a launch plan for a sample product. | Completed | Example Model A |
+| 2026-07-06 | 11:40 | Build market research report | one-off | Heavy | 920 | 1560 | Create a research report from sample data. | Completed | Example Model B |
+| 2026-07-08 | 10:15 | Prepare meeting recap | one-off | Light | 240 | 1800 | Prepare a recap from fictional meeting notes. | Completed | Example Model A |
 
 ## Weekly Summary Sample
 
-**Period:** June 1-7, 2026
+**Period:** July 5-11, 2026
 
 | Metric | Total | Light | Medium | Heavy |
 |---|---:|---:|---:|---:|
-| Tasks | 4 | 1 | 1 | 1 |
-| Verified credits | 1560 | 180 | 460 | 920 |
+| Tasks | 3 | 1 | 1 | 1 |
+| Verified credits | 1810 | 240 | 650 | 920 |
 
-- Average: 520 credits per verified task
-- Highest-credit task: Build research report (920)
-- Pending tasks: 1
+- Average: 603.3 credits per verified task
+- Highest-credit task: Build market research report (920)
+- Pending tasks: 0
 - Previous-week change: Not enough prior data
 
 ## Monthly Summary Sample
 
 | Week | Verified Credits |
 |---|---:|
-| Jun 1-7 | 1560 |
-| Jun 8-14 | 1280 |
-| Jun 15-21 | 1940 |
-| Jun 22-28 | 1110 |
-| Jun 29-30 | 390 |
-| **June total** | **6280** |
+| Week of Jun 28 | 640 |
+| Week of Jul 5 | 1810 |
+| Week of Jul 12 | 1710 |
+| Week of Jul 19 | 1300 |
+| Week of Jul 26 | 210 |
+| **July total** | **5670** |
 
 ## Repository Privacy
 
