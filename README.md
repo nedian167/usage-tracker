@@ -42,6 +42,13 @@ How many Heavy tasks did I run last month?
 
 All examples below are fictional.
 
+![Excel tracker sample with color-coded Light, Medium, and Heavy tasks](assets/usage-tracker-sheet.png)
+
+*Excel-rendered view of the core usage columns. Light is green, Medium is amber,
+and Heavy is red.*
+
+### Accessible Data Sample
+
 | Date | Time | Task Name | Task Type | Task Size | Credits Used | Running Total | User Prompt | Notes | Model |
 |---|---|---|---|---|---:|---:|---|---|---|
 | 2026-06-01 | 09:15 | Summarize project notes | one-off | Light | 180 | 180 | Summarize these project notes. | Completed | Example Model A |
