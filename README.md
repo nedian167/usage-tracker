@@ -27,7 +27,17 @@ credit consumption, workload mix, and weekly and monthly trends.
    Configure the attached usage-tracker skill for me.
    ```
 
-Cowork will use the attached instructions to provision the skill for the user. No workbook
+4. After Cowork confirms that the skill is provisioned, ask it to remember the
+   end-of-task reminder:
+
+   ```text
+   Remember that after each successfully completed task, you should ask me to run
+   the /cost command and provide the credits used for that task so the usage-tracker
+   skill can log them in Cowork Credit Tracker.xlsx.
+   ```
+
+Cowork will use the attached instructions to provision the skill for the user. The saved
+memory makes the `/cost` reminder part of future successful task completions. No workbook
 or usage data is included in the downloaded skill file.
 
 ## How to use
