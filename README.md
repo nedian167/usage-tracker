@@ -46,8 +46,8 @@ All examples below are fictional.
 
 ![Excel tracker sample with color-coded Light, Medium, and Heavy tasks](assets/usage-tracker-sheet.png)
 
-*Fictional Excel-rendered Usage tab. The colored header includes filters; Light is
-green, Medium is amber, and Heavy is red.*
+*Fictional Excel-rendered Usage tab showing the complete A-J schema end to end. The
+colored header includes filters; Light is green, Medium is amber, and Heavy is red.*
 
 ### July Credits Tab
 
