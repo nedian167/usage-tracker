@@ -1,152 +1,206 @@
 ---
 name: usage-tracker
 description: |
-  Track a user's own Copilot Cowork credit usage by logging one row per task in an
-  Excel workbook. Classify tasks as Light, Medium, or Heavy from verified credit
-  usage and summarize weekly or monthly consumption. Use when the user asks to log,
-  track, record, review, or summarize Cowork task credits, including `/track-cost`,
-  "weekly usage", and "monthly credit consumption". Do not use for Microsoft 365
-  licensing, billing, or organization-wide usage reporting.
+  Append one row to the user's existing "Cowork Credit Tracker.xlsx" workbook (in the
+  OneDrive Documents\Cowork folder) at the end of a task. Use when the user says "log this task",
+  "track this task's usage", "add this to my credit tracker", "record my credits",
+  "update my usage/credit tracker", or types "/track-cost". Also runs when a task's
+  personal instructions request end-of-task usage logging. Also captures a color-coded
+  Heavy/Medium/Light task-size tier (derived from credits), the user's original prompt,
+  and the runtime model that ran the task. Also use for weekly or monthly personal
+  credit summaries and task-size breakdowns.
+
+  Do NOT use for creating an unrelated spreadsheet (use the xlsx skill) or reporting
+  Microsoft 365 subscription/billing usage. When the user only asks to view, chart, or
+  analyze the tracker, read it without appending a row.
 cowork:
   category: automation
   icon: DocumentBulletList
 ---
 
-# Copilot Cowork Usage Tracker
+# Usage / Credit Tracker
 
-Track personal Copilot Cowork consumption in one Excel workbook. Append exactly one row
-for each logged task. Read existing rows to produce weekly and monthly summaries without
-changing history.
+Append **exactly one row per task** to the user's existing workbook **"Cowork Credit
+Tracker.xlsx"**. Append only — never rewrite, reorder, or delete history.
 
-## Configuration
+Canonical file — always target this exact file, never create it elsewhere:
+`Documents/Cowork/Cowork Credit Tracker.xlsx`.
 
-Use this default workbook unless the user explicitly requests another location:
+**Fast path — skip discovery entirely.** The workbook's Graph `id` + `driveId` are persisted in
+memory (key `fact-cowork-tracker-location`) the first time the file is created or resolved. On
+every run, **`recall_memories` that key FIRST** and go straight to
+`/me/drive/items/{id}/workbook/...` — no folder listing, no search, no path probing. Only if a
+workbook call returns **404** (file moved / renamed / deleted) fall back to discovery (step 2),
+then re-save the fresh id. This is the single biggest credit saver: on the happy path, discovery
+costs **zero** calls.
 
-`Documents\Cowork\Cowork Credit Tracker.xlsx`
+**Edit the canonical file IN PLACE via the Graph workbook API** (primary path below). This
+appends the row directly to the live file — no download, no local rebuild, no `output/`
+copy, no sync wait, no relocate, and **no stray copies to merge**. It also preserves the
+file's sensitivity label (a local openpyxl rebuild strips it). Only if the workbook API is
+unavailable, fall back to the openpyxl + relocate path at the end.
 
-Use worksheet `Usage` and the user's current timezone. Do not hard-code a username, email
-address, tenant identifier, drive identifier, or machine-specific absolute path.
+## When NOT to Append
+- **Viewing / charting / analyzing** the tracker → read the workbook without appending.
+- **A different or unrelated spreadsheet** → use the **xlsx** skill.
+- **M365 subscription or license billing** → out of scope; this logs per-task Cowork credits only.
+- **Backfilling a past session's model or credits as if verified** → only the current session's
+  values are verifiable; leave unknowns blank rather than guessing (see Guardrails).
 
-On the first run, if the workbook does not exist, create it automatically at the default
-path with the `Usage` sheet and schema below. Create the `Documents\Cowork` folder first
-if necessary. Do not create duplicate tracker workbooks.
-
-## Scope
-
-Use this skill to:
-
-- Log the current task's verified credit usage.
-- Show recent entries.
-- Summarize consumption for the current or requested calendar week.
-- Summarize consumption for the current or requested calendar month.
-- Break down tasks and credits by Light, Medium, and Heavy classifications.
-
-Do not use it for subscription billing, license allocation, organization-wide analytics,
-or unrelated spreadsheet work.
-
-## Workbook Schema
-
-Use columns A-J in this exact order:
+## Schema — sheet `Usage` (do not invent columns)
+Columns A–J, in order:
 
 `Date` | `Time` | `Task Name` | `Task Type` | `Task Size` | `Credits Used` | `Running Total` | `User Prompt` | `Notes` | `Model`
 
-- **Date**: local date as `YYYY-MM-DD`.
-- **Time**: local time as `HH:MM`.
-- **Task Name**: short, descriptive title.
-- **Task Type**: `one-off` or `recurring`.
-- **Task Size**: derived only from verified `Credits Used`:
-  - Light: fewer than 300 credits.
-  - Medium: 300 through 700 credits.
-  - Heavy: more than 700 credits.
-  - Blank when credits are unknown.
-- **Credits Used**: exact value supplied by the user after running `/cost`.
-- **Running Total**: previous Running Total plus Credits Used; unknown credits count as
-  zero until updated.
-- **User Prompt**: the user's original request, truncated to 500 characters with `...`
-  when needed.
-- **Notes**: concise context. Use `pending - awaiting credit figure` when credits are
-  unknown.
-- **Model**: current runtime model when reliably available; otherwise blank.
+- **Date** — YYYY-MM-DD in the user's current timezone. **Time** — HH:MM (24h) in the
+  user's current timezone.
+- **Task Name** — short description.  **Task Type** — `one-off` or `recurring`.
+- **Task Size** (col E) — auto-derived from **Credits Used** (never asked, never guessed ahead of credits):
+  Light <300 · Medium 300–700 · Heavy >700. Blank when Credits Used is blank.
+  **Coloring is automatic** via standing conditional-format rules on column E (see step 5 / "Creating
+  the tracker"): Light `#C6EFCE` / `#006100` · Medium `#FFEB9C` / `#9C6500` · Heavy `#FFC7CE` / `#9C0006`.
+- **Credits Used** (col F) — the figure the user gives from `/cost`. Never estimated, inferred, or fabricated.
+- **Running Total** (col G) — previous row's Running Total + this row's Credits Used (blank credits count as 0, carry forward).
+- **User Prompt** (col H) — the user's verbatim original request (not a paraphrase). Auto-captured — never ask. Truncate to ~500 chars + "…" if longer.
+- **Notes** (col I) — brief context, or `pending — awaiting /cost figure` when no credits are given.
+- **Model** (col J) — see below.
 
-Format the Task Size cell:
+## Credits and Model — what can and cannot be captured
+- **Credits Used is NOT readable by the assistant.** `/cost` and `/usage` are interactive commands shown only
+  to the user, so credits must come from the user. If none is given: leave Credits Used blank, leave Task Size
+  blank, carry Running Total forward, and put `pending — awaiting /cost` in Notes.
+- **Model is auto-captured** from the assistant's own current runtime model — verified for the live task (e.g.
+  "Claude Opus 4.8"). Only if it genuinely can't be determined, ask for it in the **same message** where you
+  request the `/cost` figure; if still unknown, leave Model blank and note `model not provided`.
+- **Never fabricate, estimate, infer, or back-stamp** a credits number, a Task Size tier, or a Model — and never
+  stamp a model onto a row for any session other than the current one.
 
-| Size | Fill | Font |
-|---|---|---|
-| Light | `#C6EFCE` | `#006100` |
-| Medium | `#FFEB9C` | `#9C6500` |
-| Heavy | `#FFC7CE` | `#9C0006` |
+## Workflow — edit the canonical in place (primary)
+Use `/me/drive/items/{id}/…` paths only (never `/drives/{drive-id}/items/{id}`, which fails here). Reads are
+Graph `GET` (QueryGraph); writes are Graph `PATCH`/`POST` (CallGraph).
 
-## Logging Workflow
+1. Resolve the current date/time in the user's current timezone, capture the user's verbatim original prompt
+   (truncate ~500 chars + "…"), and **`recall_memories("fact-cowork-tracker-location")`** for the
+   stored `id` + `driveId`. Have it → jump to step 3 with `/me/drive/items/{id}/workbook`.
+2. **Resolve the item id — only if the memory fast path missed (or a call 404s).** List the Cowork
+   folder with `GetDriveChildren(item_path="/Documents/Cowork")` — its payload carries real `015…`
+   item ids (the `:/children` QueryGraph render can collapse and hide the `.xlsx`, so don't rely on
+   it). Take the `id` of `Cowork Credit Tracker.xlsx`; if absent, fall back once to
+   `SearchM365(sources=["files"], query="Cowork Credit Tracker")`. **If it exists nowhere, create it
+   (see "Creating the tracker") and stop.** On any create OR fresh resolve, immediately persist
+   `{id, driveId}` via `save_memory(key="fact-cowork-tracker-location", …)` so every later run takes
+   the fast path.
+3. **Read row count + last total in ONE call** —
+   `GET /me/drive/items/{id}/workbook/worksheets('Usage')/usedRange?$select=rowCount,values`.
+   `rowCount` is `R` (new row = `R+1`); the previous Running Total is the last returned row's
+   column-G value. No second range read.
+4. **Append the row in ONE write** — fold values + date/time format into a single PATCH:
+   `PATCH /me/drive/items/{id}/workbook/worksheets('Usage')/range(address='A{R+1}:J{R+1}')` with body
+   `{"values": [[ …10 values… ]], "numberFormat": [["yyyy-mm-dd","hh:mm","General","General","General","General","General","General","General","General"]]}`.
+   The API auto-types the `"YYYY-MM-DD"`/`"HH:MM"` strings into date/time serials; the inline
+   `numberFormat` fixes their display in the same call — **no separate format PATCH**.
+   (Excel-Table sheet? `POST …/worksheets('Usage')/tables/{table}/rows/add` with `{"values": [[ … ]]}`
+   also works, auto-appending with no index.)
+5. **Task-Size color = standing conditional formatting, NOT per-row PATCHes.** The `Usage` sheet
+   carries three conditional-format rules on column E (Heavy/Medium/Light → tier fill+font), baked in
+   at creation (see "Creating the tracker"), so an appended `"Heavy"`/`"Medium"`/`"Light"` value
+   colors itself with **zero** extra calls. Do NOT PATCH `E{R+1}` fill/font when those rules exist.
+   *Legacy fallback only* — a workbook created before the CF rules has none on column E: color the one
+   cell manually (`PATCH …/range('E{R+1}')/format/fill` `{"color":"<fill>"}` + `…/format/font`
+   `{"color":"<font>"}` per the tier) and tell the user to add the CF rules once in Excel (Home →
+   Conditional Formatting → Highlight Cells → Equal To) to drop this step for good.
+6. **Verify from the write response** — the range `PATCH` echoes the written `address`/`values`. That
+   is the confirmation — do **not** re-download the workbook, and never run a second `SearchM365` to
+   "find" what you just wrote (the index lags; the write response is authoritative).
+7. Confirm to the user in one line (see Output format).
 
-1. Resolve the default workbook and `Usage` worksheet, creating them on first run when
-   absent.
-2. Capture the user's original prompt and local date/time.
-3. Use only the exact credit figure explicitly supplied by the user. The assistant cannot
-   read `/cost`; never estimate or infer credits.
-4. Read the last populated row and its Running Total.
-5. Derive Task Size from the thresholds above.
-6. Append one row in place through the workbook API or the host's spreadsheet editing
-   capability. Do not download and rebuild a cloud workbook when an in-place API exists.
-7. Apply date, time, and Task Size formatting.
-8. Verify the append from the write response or by reading only the new row.
-9. Confirm the task name, credits or pending status, size, and Running Total.
+### Example — appending the 11th data row (sheet has header + 10 rows, `R = 11`, fast path hit)
+```
+recall_memories("fact-cowork-tracker-location") → id=015…, driveId=b!…   (0 discovery calls)
+GET   …/workbook/worksheets('Usage')/usedRange?$select=rowCount,values   → rowCount 11; last G = 8521
+PATCH …/workbook/worksheets('Usage')/range(address='A12:J12')
+      {"values":[["2026-07-13","16:45","Optimize a skill","one-off","Light",250,8771,"<prompt>","<notes>","Claude Opus 4.8"]],
+       "numberFormat":[["yyyy-mm-dd","hh:mm","General","General","General","General","General","General","General","General"]]}
+# color: none — the column-E conditional-format rule paints "Light" automatically.
+```
+Three calls total (recall + read + write) versus the old ~6+. Session-less workbook calls persist to
+the stored file immediately — no `workbook-session-id` header is available through the connector, and
+none is needed. The change hits the server copy right away; if the user has the workbook open in
+desktop Excel (or a synced local copy) it only appears after a refresh/reopen — say so when confirming.
 
-If no credit figure is available, still log the task once with blank Credits Used and Task
-Size, carry the Running Total forward, and set Notes to `pending - awaiting credit figure`.
-If the user later provides the figure, update that pending row rather than adding a
-duplicate, then recompute Running Total for that row and all later rows.
+## Creating the tracker (first run — bake in CF + pin the id)
+If the workbook exists nowhere, create it ONCE, then never rediscover:
+1. Build with `openpyxl` (or the xlsx skill): a `Usage` sheet with the A1:J1 header (fill `#7A1730`,
+   bold white `#FFFFFF`) and a monthly `"<Mmm> Credits"` summary sheet (formula-driven via SUMIFS /
+   COUNTIFS over `Usage` — auto-recomputes, no per-run writes).
+2. **Bake the three conditional-format rules onto column E** so coloring is automatic forever (this is
+   the credit win — every future append skips the fill/font PATCHes):
+   ```python
+   from openpyxl.formatting.rule import CellIsRule
+   from openpyxl.styles import PatternFill, Font
+   rng = 'E2:E100000'
+   ws.conditional_formatting.add(rng, CellIsRule(operator='equal', formula=['"Heavy"'],
+       fill=PatternFill('solid', fgColor='FFC7CE'), font=Font(color='9C0006')))
+   ws.conditional_formatting.add(rng, CellIsRule(operator='equal', formula=['"Medium"'],
+       fill=PatternFill('solid', fgColor='FFEB9C'), font=Font(color='9C6500')))
+   ws.conditional_formatting.add(rng, CellIsRule(operator='equal', formula=['"Light"'],
+       fill=PatternFill('solid', fgColor='C6EFCE'), font=Font(color='006100')))
+   ```
+   (CF cannot be added through the sessionless workbook API — the `conditionalFormats` endpoint needs
+   a workbook session the connector can't open — so it MUST be set at openpyxl creation, or once by
+   the user in Excel on a legacy file.)
+3. Upload to `Documents/Cowork`, then **capture the returned item `id` + `driveId` and
+   `save_memory(key="fact-cowork-tracker-location", …)`** immediately. Every subsequent run uses the
+   fast path and never rediscovers.
 
-## Weekly Summary
+## Output format
+One confirmation line: what was logged, Credits Used (value or "pending"), the derived Task Size (value or
+"pending"), the new Running Total, and that `Documents/Cowork/Cowork Credit Tracker.xlsx` itself now
+reflects it (verified from the write response). If asked, show recent rows as a small `render-ui` table.
 
-Interpret "week" as Monday through Sunday unless the user specifies another convention.
-For the requested local-date range:
+## Weekly and monthly reporting
+For requests such as "show my usage this week" or "summarize this month's credits":
+1. Read the existing `Usage` rows or the formula-driven monthly credits sheet. Do not append.
+2. Use the user's current timezone. A week is Monday-Sunday unless the user specifies
+   another convention.
+3. Report total verified credits; total and verified task counts; Light, Medium, and Heavy
+   counts and credits; average credits per verified task; highest-credit task; and pending
+   task count.
+4. For monthly summaries, include a week-by-week breakdown. Compare with the immediately
+   preceding equivalent period when sufficient data exists.
+5. Never estimate missing credits. Exclude pending rows from credit totals and identify
+   their count.
 
-1. Read rows whose Date falls within the range.
-2. Exclude pending rows from credit totals, but report their count.
-3. Calculate:
-   - total verified credits;
-   - total tasks and verified tasks;
-   - Light, Medium, and Heavy task counts;
-   - credits consumed by each size;
-   - average credits per verified task;
-   - highest-credit task;
-   - change versus the immediately preceding equivalent week, when data exists.
-4. Present the date range and a compact table. Do not append summary rows to `Usage`.
+## Fallback — only if the workbook API is unavailable
+If the workbook endpoints error (feature off, unsupported), rebuild locally and relocate:
+1. `ReadFileContent` the canonical file (its JSON gives the real `id` + `parentReference.id`).
+2. **Self-heal merge** (needed only on this path, because it creates `output/` copies): from one
+   `SearchM365(query="Cowork Credit Tracker")`, download any stray `Cowork Credit Tracker*.xlsx` under
+   `Documents\Cowork\Tasks\*\output\` **only if listed**, merge rows not already present (match Date+Time+Task
+   Name), drop placeholder/undated rows, re-sort, recompute Running Total.
+3. `openpyxl` append one row (plain numeric Running Total); keep the column-E CF rules intact (they carry the
+   coloring); build/validate in `working/` (`zipfile.is_zipfile` + reopen), then copy one clean file to
+   `output/Cowork Credit Tracker.xlsx`.
+4. **Relocate via metadata PATCH** (never content upload). Navigate the live drive (not the lagging search index)
+   to this session's synced copy — `GET /me/drive/root:/Documents/Cowork/Tasks:/children?$orderby=lastModifiedDateTime desc`
+   → newest task folder → `output` child → its item id. Then **single replace-move**:
+   `PATCH /me/drive/items/{new-id}` `{"name":"Cowork Credit Tracker.xlsx","parentReference":{"id":"<Cowork folder id>"},"@microsoft.graph.conflictBehavior":"replace"}`.
+   On `409` (tenant won't replace on move), rename the old canonical aside
+   (`{"name":"Cowork Credit Tracker (superseded <date>).xlsx"}` — never delete) then re-issue the move without
+   `conflictBehavior`. Verify from the PATCH response (`name` + `parentReference.id`), not a re-download.
+5. Re-`save_memory` the new item id, and list any superseded/stray copies by path so the user can remove them
+   manually (no delete tool exists).
 
-## Monthly Summary
-
-Use the requested calendar month in the configured timezone:
-
-1. Read rows whose Date falls within the month.
-2. Compute the same metrics as the weekly summary.
-3. Add a week-by-week credit breakdown within the month.
-4. Compare with the previous calendar month when data exists.
-5. Present a compact summary and call out pending entries. Do not modify task history.
-
-## Reporting Format
-
-Use this structure:
-
-| Metric | Total | Light | Medium | Heavy |
-|---|---:|---:|---:|---:|
-| Tasks | ... | ... | ... | ... |
-| Credits | ... | ... | ... | ... |
-
-Then show:
-
-- Average credits per verified task.
-- Highest-credit task.
-- Pending task count.
-- Previous-period change, or `Not enough prior data`.
-
-## Privacy and Safety
-
-- Track only the requesting user's own usage unless they explicitly provide and authorize
-  another data source.
-- Never include workbook data in outbound messages without a preview and confirmation.
-- Never commit or publish tracker workbooks, exports, prompts, usage records, identifiers,
-  access tokens, or local configuration.
-- Never fabricate credits, classifications, model names, or comparisons.
-- Preserve all historical rows; only update a row to resolve its pending credit figure.
-- Prefer in-place cloud workbook edits to preserve labels, permissions, and version history.
-- Surface access and write failures clearly; do not claim a task was logged unless verified.
+## Guardrails
+- **Fast path first** — `recall_memories("fact-cowork-tracker-location")` and go direct to
+  `/me/drive/items/{id}/workbook`; only discover on a 404, then re-save the id. Persist the id at creation.
+- **Prefer in-place workbook-API edits** — they avoid the round-trip, create no strays, and preserve the sensitivity label. Use the openpyxl+relocate fallback only when the API is unavailable.
+- **Task-Size color comes from standing conditional-format rules** (set at creation), not per-row writes; only color manually as a legacy fallback when the sheet has no CF on column E.
+- **Never fabricate or estimate** Credits Used, Task Size, or Model — blank + a `pending`/`not provided` note when unknown.
+- **Task Size is strictly derived** from Credits Used thresholds, only once credits are known.
+- **Model = the running model or the user's answer**, never a guess, never back-stamped onto another session's row.
+- **Discover via `GetDriveChildren(item_path="/Documents/Cowork")`** (real `015…` ids); only broaden to `SearchM365` if absent. **Never run a second index search for something just written** — use the write response or live drive navigation.
+- **Append only** — preserve every prior row (drop only an explicit "Sample row" / undated placeholder during a fallback merge).
+- **Keep exactly one live workbook** at the canonical path.
+- **Verify from the API/PATCH response, never a full re-fetch.** Never PUT raw content to an item's `/content` endpoint via `CallGraph` (JSON≠binary); edits are workbook-API or metadata PATCH only.
+- **Never delete** — on the fallback path, free the canonical name by renaming the old file aside (recoverable).
