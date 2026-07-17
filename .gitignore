@@ -1,0 +1,21 @@
+# User data and local configuration
+*.xlsx
+*.xlsm
+*.csv
+*.tsv
+.env
+.env.*
+config.local.*
+settings.local.*
+
+# Generated and temporary files
+output/
+working/
+tmp/
+*.log
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
