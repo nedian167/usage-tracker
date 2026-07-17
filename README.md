@@ -40,30 +40,32 @@ How many Heavy tasks did I run last month?
 
 ## Workbook Screenshots
 
-All examples below are fictional.
+All task and credit data below is fictional. Model labels in the Usage preview match
+models recorded by the tracker.
 
 ### Usage Tab
 
 ![Excel tracker sample with color-coded Light, Medium, and Heavy tasks](assets/usage-tracker-sheet.png)
 
 *Fictional Excel-rendered Usage tab showing the complete A-J schema end to end. The
-colored header includes filters; Light is green, Medium is amber, and Heavy is red.*
+header matches the canonical workbook; Light is green, Medium is amber, Heavy is red,
+and the Model column uses actual model names.*
 
 ### July Credits Tab
 
 ![Fictional July credit summary with weekly totals and task-size breakdown](assets/july-credits-sheet.png)
 
-*Fictional Excel-rendered July Credits tab showing weekly consumption, the monthly
-total, and credits and prompt counts by task size.*
+*Fictional Excel-rendered July Credits tab, proportioned to the Usage preview, showing
+weekly consumption, the monthly total, and credits and prompt counts by task size.*
 
 ### Accessible Data Sample
 
 | Date | Time | Task Name | Task Type | Task Size | Credits Used | Running Total | User Prompt | Notes | Model |
 |---|---|---|---|---|---:|---:|---|---|---|
-| 2026-07-02 | 09:10 | Summarize workshop notes | one-off | Light | 180 | 180 | Summarize these fictional workshop notes. | Completed | Example Model A |
-| 2026-07-03 | 14:25 | Draft product launch plan | one-off | Medium | 460 | 640 | Draft a launch plan for a sample product. | Completed | Example Model A |
-| 2026-07-06 | 11:40 | Build market research report | one-off | Heavy | 920 | 1560 | Create a research report from sample data. | Completed | Example Model B |
-| 2026-07-08 | 10:15 | Prepare meeting recap | one-off | Light | 240 | 1800 | Prepare a recap from fictional meeting notes. | Completed | Example Model A |
+| 2026-07-02 | 09:10 | Summarize workshop notes | one-off | Light | 180 | 180 | Summarize these fictional workshop notes. | Completed | Claude Opus 4.8 |
+| 2026-07-03 | 14:25 | Draft product launch plan | one-off | Medium | 460 | 640 | Draft a launch plan for a sample product. | Completed | Claude Sonnet 5 (1M context) |
+| 2026-07-06 | 11:40 | Build market research report | one-off | Heavy | 920 | 1560 | Create a research report from sample data. | Completed | Claude Opus 4.8 |
+| 2026-07-08 | 10:15 | Prepare meeting recap | one-off | Light | 240 | 1800 | Prepare a recap from fictional meeting notes. | Completed | Claude Opus 4.8 |
 
 ## Weekly Summary Sample
 
