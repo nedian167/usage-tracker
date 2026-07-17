@@ -4,6 +4,10 @@
 reporting weekly and monthly usage. It classifies verified tasks as Light, Medium, or
 Heavy and keeps a cumulative running total in an Excel workbook.
 
+Copilot Cowork does not currently provide this level of personal, per-task usage analysis
+out of the box. This skill fills that gap by giving users a simple history of their tasks,
+credit consumption, workload mix, and weekly and monthly trends.
+
 ## Features
 
 - Logs one workbook row per Cowork task.
@@ -11,22 +15,45 @@ Heavy and keeps a cumulative running total in an Excel workbook.
 - Preserves the user's original prompt and current runtime model when available.
 - Reports weekly and monthly totals, averages, trends, and task-size breakdowns.
 - Records unknown credit values as pending instead of estimating them.
-- Uses configurable storage with no personal or tenant-specific values in the skill.
+- Creates one personal tracker at `Documents\Cowork\Cowork Credit Tracker.xlsx`.
 
 ## Install
 
-Copy the repository folder into the skills directory supported by your Copilot Cowork
-environment, then enable `usage-tracker`.
+1. Download [`SKILL.md`](SKILL.md) from this repository.
+2. Attach `SKILL.md` to a Copilot Cowork conversation.
+3. Ask Cowork:
 
-On first use, configure:
+   ```text
+   Configure the attached usage-tracker skill for me.
+   ```
 
-| Setting | Description |
-|---|---|
-| `TRACKER_FILE` | OneDrive or SharePoint path/URL of the user's tracker workbook |
-| `TRACKER_SHEET` | Worksheet name; defaults to `Usage` |
-| `TIMEZONE` | User's IANA timezone |
+Cowork will use the attached instructions to provision the skill for the user. No workbook
+or usage data is included in the downloaded skill file.
 
-Do not commit the configured workbook, usage exports, or local settings.
+## How to use
+
+On its first run, the skill creates `Cowork Credit Tracker.xlsx` in the user's
+`Documents\Cowork` folder, with the `Usage` sheet and required columns ready for logging.
+
+The skill cannot read the task's credit consumption automatically. After completing a
+Cowork task:
+
+1. Run the `/cost` command in Cowork.
+2. Copy the credit figure shown by `/cost`.
+3. Invoke the skill and provide that exact value, for example:
+
+   ```text
+   Log usage of credits 245.
+   ```
+
+The skill appends the task to the tracker, derives its Light, Medium, or Heavy size, and
+updates the running total. Users can then ask for summaries such as:
+
+```text
+Show my Cowork usage for this week.
+Summarize my July 2026 credit consumption.
+How many Heavy tasks did I run last month?
+```
 
 ## Example Requests
 

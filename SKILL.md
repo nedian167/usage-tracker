@@ -14,24 +14,22 @@ cowork:
 
 # Copilot Cowork Usage Tracker
 
-Track personal Copilot Cowork consumption in one configurable Excel workbook. Append
-exactly one row for each logged task. Read existing rows to produce weekly and monthly
-summaries without changing history.
+Track personal Copilot Cowork consumption in one Excel workbook. Append exactly one row
+for each logged task. Read existing rows to produce weekly and monthly summaries without
+changing history.
 
 ## Configuration
 
-Before the first write, obtain or confirm these values:
+Use this default workbook unless the user explicitly requests another location:
 
-- `TRACKER_FILE`: the user's chosen OneDrive or SharePoint workbook path or URL.
-- `TRACKER_SHEET`: worksheet name; default `Usage`.
-- `TIMEZONE`: IANA timezone; use the user's current timezone when available.
+`Documents\Cowork\Cowork Credit Tracker.xlsx`
 
-Do not hard-code a username, email address, tenant identifier, drive identifier, or
-machine-specific path. Store configuration using the host's supported skill settings or
-ask the user when it is missing. Do not commit a user's workbook or configuration.
+Use worksheet `Usage` and the user's current timezone. Do not hard-code a username, email
+address, tenant identifier, drive identifier, or machine-specific absolute path.
 
-If the workbook does not exist, ask before creating it. Create only the `Usage` sheet and
-the schema below.
+On the first run, if the workbook does not exist, create it automatically at the default
+path with the `Usage` sheet and schema below. Create the `Documents\Cowork` folder first
+if necessary. Do not create duplicate tracker workbooks.
 
 ## Scope
 
@@ -61,7 +59,7 @@ Use columns A-J in this exact order:
   - Medium: 300 through 700 credits.
   - Heavy: more than 700 credits.
   - Blank when credits are unknown.
-- **Credits Used**: exact value supplied by the user or exposed by the current runtime.
+- **Credits Used**: exact value supplied by the user after running `/cost`.
 - **Running Total**: previous Running Total plus Credits Used; unknown credits count as
   zero until updated.
 - **User Prompt**: the user's original request, truncated to 500 characters with `...`
@@ -80,10 +78,11 @@ Format the Task Size cell:
 
 ## Logging Workflow
 
-1. Resolve the configured workbook and worksheet.
+1. Resolve the default workbook and `Usage` worksheet, creating them on first run when
+   absent.
 2. Capture the user's original prompt and local date/time.
-3. Get the exact credit figure from the runtime when available. Otherwise, use a value
-   explicitly supplied by the user. Never estimate it.
+3. Use only the exact credit figure explicitly supplied by the user. The assistant cannot
+   read `/cost`; never estimate or infer credits.
 4. Read the last populated row and its Running Total.
 5. Derive Task Size from the thresholds above.
 6. Append one row in place through the workbook API or the host's spreadsheet editing
